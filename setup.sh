@@ -1,9 +1,9 @@
 #!/bin/bash
-read -p "Masters: " MASTERS
-read -p "Workers: " WORKERS
-read -p "Kubernetes Version (e.g., 1.29): " K8S_VERSION
+read -p "How many Masters ?: " MASTERS
+read -p "How many Workers ?: " WORKERS
+read -p "Kubernetes Version else 1.31 (e.g., 1.31): " K8S_VERSION
 
-K8S_VERSION=${K8S_VERSION:-1.29}
+K8S_VERSION=${K8S_VERSION:-1.31}
 
 cat <<EOF > cluster_vars.yml
 masters_count: $MASTERS
