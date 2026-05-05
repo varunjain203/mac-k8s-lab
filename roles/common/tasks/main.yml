@@ -43,6 +43,7 @@
       - curl
       - containerd
       - gpg
+      - conntrack
     state: present
     update_cache: yes
 
