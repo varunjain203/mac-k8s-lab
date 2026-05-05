@@ -1,0 +1,74 @@
+---
+- name: Create List of Nodes
+  ansible.builtin.set_fact:
+    nodes: |
+      {% set n = [] %}
+      {% if masters_count | int > 1 %}
+      {%   set _ = n.append('haproxy') %}
+      {% endif %}
+      {% for i in range(1, masters_count | int + 1) %}
+      {%   set _ = n.append('k8s-master-' ~ i) %}
+      {% endfor %}
+      {% for i in range(1, workers_count | int + 1) %}
+      {%   set _ = n.append('k8s-worker-' ~ i) %}
+      {% endfor %}
+      {{ n }}
+
+- name: Launch or Start Multipass VMs
+  ansible.builtin.shell: |
+    if ! multipass info {{ item }} >/dev/null 2>&1; then
+      multipass launch 22.04 --name {{ item }} --cpus 2 --memory 2G
+    else
+      multipass start {{ item }} || true
+    fi
+  loop: "{{ nodes }}"
+
+- name: Check if SSH key is already injected
+  ansible.builtin.shell: "multipass exec {{ item }} -- grep -q '{{ ssh_key.split(' ')[1] }}' ~/.ssh/authorized_keys"
+  register: key_check
+  failed_when: false
+  changed_when: false
+  loop: "{{ nodes }}"
+
+- name: Inject SSH Keys if missing
+  ansible.builtin.shell: |
+    echo "{{ ssh_key }}" > /tmp/k8s_key.pub
+    multipass transfer /tmp/k8s_key.pub {{ item }}:/home/ubuntu/new_key.pub
+    multipass exec {{ item }} -- bash -c "mkdir -p ~/.ssh && cat ~/new_key.pub >> ~/.ssh/authorized_keys && rm ~/new_key.pub"
+  loop: "{{ nodes }}"
+  loop_control:
+    index_var: idx
+  when: key_check.results[idx].rc != 0
+
+- name: Get IP addresses from Multipass
+  ansible.builtin.shell: multipass info {{ item }} --format csv | awk -F, 'NR==2 {print $3}'
+  register: vm_ips_raw
+  loop: "{{ nodes }}"
+
+- name: Generate Inventory File
+  ansible.builtin.copy:
+    dest: "./inventory.ini"
+    content: |
+      [haproxy]
+      {% for res in vm_ips_raw.results %}
+      {% if res.item == 'haproxy' %}
+      haproxy ansible_host={{ res.stdout }} ansible_user=ubuntu
+      {% endif %}
+      {% endfor %}
+
+      [masters]
+      {% for res in vm_ips_raw.results %}
+      {% if 'master' in res.item %}
+      {{ res.item }} ansible_host={{ res.stdout }} ansible_user=ubuntu
+      {% endif %}
+      {% endfor %}
+
+      [workers]
+      {% for res in vm_ips_raw.results %}
+      {% if 'worker' in res.item %}
+      {{ res.item }} ansible_host={{ res.stdout }} ansible_user=ubuntu
+      {% endif %}
+      {% endfor %}
+
+- name: Refresh inventory to recognize new nodes
+  ansible.builtin.meta: refresh_inventory

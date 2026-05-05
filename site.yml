@@ -1,0 +1,86 @@
+---
+- name: Provision Infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - cluster_vars.yml
+  vars:
+    ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  roles:
+    - infra
+
+- name: Install K8s on all nodes
+  hosts: masters, workers
+  gather_facts: yes
+  become: true
+  tasks:
+    - name: Ensure inventory is fresh
+      meta: refresh_inventory
+  roles:
+    - common
+
+- name: Initialize Master Node
+  hosts: masters
+  become: true
+  roles:
+    - master
+
+- name: Join Worker Nodes
+  hosts: workers
+  become: true
+  roles:
+    - worker
+
+- name: Install Pod Network Add-on (Calico)
+  hosts: masters[0]
+  become: true
+  tasks:
+    - name: Download Calico manifest
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+        dest: /tmp/calico.yaml
+
+    - name: Update Calico pod CIDR to match kubeadm (10.244.0.0/16)
+      ansible.builtin.replace:
+        path: /tmp/calico.yaml
+        regexp: '192\.168\.0\.0/16'
+        replace: '10.244.0.0/16'
+
+    - name: Apply Calico manifest
+      ansible.builtin.command: kubectl apply -f /tmp/calico.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+- name: Configure local kubectl
+  hosts: masters[0]
+  become: true
+  tasks:
+    - name: Ensure local .kube directory exists
+      delegate_to: localhost
+      become: false
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: Fetch kubeconfig from master
+      ansible.builtin.fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "{{ lookup('env', 'HOME') }}/.kube/config"
+        flat: yes
+
+- name: Display Multipass Cluster Status
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Fetch multipass VM list
+      ansible.builtin.command: multipass list --format table
+      register: multipass_list
+      changed_when: false
+
+    - name: Output Multipass VMs table
+      ansible.builtin.debug:
+        msg: "{{ multipass_list.stdout_lines }}"

@@ -1,0 +1,16 @@
+---
+- name: Initialize Cluster
+  command: kubeadm init --pod-network-cidr=10.244.0.0/16
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Generate Join Command
+  command: kubeadm token create --print-join-command
+  register: join_command_raw
+
+- name: Share Join Command with all nodes
+  set_fact:
+    join_command: "{{ join_command_raw.stdout }}"
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: "{{ groups['all'] }}"
