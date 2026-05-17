@@ -11,7 +11,7 @@
 - name: Launch or Start Multipass VMs
   ansible.builtin.shell: |
     if ! multipass info {{ item }} >/dev/null 2>&1; then
-      multipass launch 22.04 --name {{ item }} --cpus 2 --memory 2G
+      multipass launch 22.04 --name {{ item }} --cpus 2 --memory 2G --disk 8G
     else
       multipass start {{ item }} || true
     fi
