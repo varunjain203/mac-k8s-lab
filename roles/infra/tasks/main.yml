@@ -72,3 +72,48 @@
 
 - name: Refresh inventory to recognize new nodes
   ansible.builtin.meta: refresh_inventory
+
+- name: Configure HAProxy for control-plane load balancing (when multiple masters)
+  block:
+    - name: Build HAProxy config and copy to haproxy VM
+      ansible.builtin.shell: |
+        cat > /tmp/haproxy.cfg <<'EOF'
+        global
+            log /dev/log local0
+            log /dev/log local1 notice
+            chroot /var/lib/haproxy
+            stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+            stats timeout 30s
+            user haproxy
+            group haproxy
+            daemon
+
+        defaults
+            log     global
+            mode    tcp
+            option  tcplog
+            timeout connect 10s
+            timeout client  1m
+            timeout server  1m
+
+        frontend kubernetes-frontend
+            bind *:6443
+            default_backend kubernetes-backend
+
+        backend kubernetes-backend
+            mode tcp
+            balance roundrobin
+        EOF
+
+        {% for res in vm_ips_raw.results %}
+        {%   if 'master' in res.item %}
+        echo "    server {{ res.item }} {{ res.stdout }}:6443 check" >> /tmp/haproxy.cfg
+        {%   endif %}
+        {% endfor %}
+
+        multipass transfer /tmp/haproxy.cfg haproxy:/home/ubuntu/haproxy.cfg
+        multipass exec haproxy -- sudo mv /home/ubuntu/haproxy.cfg /etc/haproxy/haproxy.cfg
+        multipass exec haproxy -- sudo apt-get update -y
+        multipass exec haproxy -- sudo apt-get install -y haproxy
+        multipass exec haproxy -- sudo systemctl restart haproxy
+  when: masters_count | int > 1

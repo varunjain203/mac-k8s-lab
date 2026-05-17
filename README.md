@@ -80,6 +80,8 @@ The cluster consists of:
         └──────────────────────────┘    │
            │                             │
            └─────────────────────────────┘
+
+When you request more than one master node, the playbook will provision a small HAProxy VM (`haproxy`) and configure it as the control-plane load balancer. The first master initializes the cluster with the control-plane endpoint pointed at the HAProxy address, and additional masters are joined as control-plane nodes.
 ```
 
 ### Network Configuration
