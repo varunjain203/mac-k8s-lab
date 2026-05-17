@@ -53,6 +53,29 @@
         KUBECONFIG: /etc/kubernetes/admin.conf
       changed_when: false
 
+- name: Install Metrics Server
+  hosts: masters[0]
+  become: true
+  tasks:
+    - name: Download Metrics Server manifest
+      ansible.builtin.get_url:
+        url: https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+        dest: /tmp/metrics-server.yaml
+
+    - name: Apply Metrics Server manifest with kubelet-insecure-tls flag
+      ansible.builtin.command: kubectl apply -f /tmp/metrics-server.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    - name: Update Metrics Server deployment with --kubelet-insecure-tls flag
+      ansible.builtin.command: |
+        kubectl patch deployment metrics-server -n kube-system \
+        --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
 - name: Configure local kubectl
   hosts: masters[0]
   become: true
