@@ -1,6 +1,8 @@
 #!/bin/bash
-read -p "How many Masters ?: " MASTERS
-read -p "How many Workers ?: " WORKERS
+echo "Masters are fixed to 1 in this lab"
+MASTERS=1
+
+read -p "How many Workers you want to spin up?: " WORKERS
 read -p "Kubernetes Version else 1.31 (e.g., 1.31): " K8S_VERSION
 
 K8S_VERSION=${K8S_VERSION:-1.31}

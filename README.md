@@ -12,7 +12,7 @@ This repository contains Ansible playbooks and scripts to automate the creation 
 - **Calico**: Container Network Interface (CNI) plugin
 - **Metrics Server**: Kubernetes metrics collection
 
-The setup is fully configurable, allowing you to specify the number of master/worker nodes and the Kubernetes version at deployment time.
+The setup is configurable for worker count and the Kubernetes version; masters are fixed to 1 for this lab.
 
 ## Prerequisites
 
@@ -80,8 +80,6 @@ The cluster consists of:
         └──────────────────────────┘    │
            │                             │
            └─────────────────────────────┘
-
-When you request more than one master node, the playbook will provision a small HAProxy VM (`haproxy`) and configure it as the control-plane load balancer. The first master initializes the cluster with the control-plane endpoint pointed at the HAProxy address, and additional masters are joined as control-plane nodes.
 ```
 
 ### Network Configuration
@@ -102,9 +100,10 @@ cd mac-k8s-lab
 ```
 
 The script will prompt you for:
-- **Masters Count**: Number of master nodes (typically 1 or 3 for HA)
 - **Workers Count**: Number of worker nodes (typically 2+)
 - **Kubernetes Version**: K8s version (e.g., 1.31, 1.32) or press Enter for default (1.31)
+
+Note: `masters_count` is fixed to `1` in this lab.
 
 ### 3. Wait for Cluster to Be Ready
 The playbook will:

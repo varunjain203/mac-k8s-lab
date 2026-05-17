@@ -1,14 +1,9 @@
 ---
 - name: Initialize Cluster
   block:
-    - name: Set control plane endpoint (haproxy or this master)
+    - name: Set control plane endpoint (first master)
       set_fact:
-        control_plane_endpoint: >-
-          {% if groups['haproxy'] is defined and groups['haproxy'] | length > 0 %}
-          {{ hostvars[groups['haproxy'][0]].ansible_host }}:6443
-          {% else %}
-          {{ hostvars[groups['masters'][0]].ansible_host }}:6443
-          {% endif %}
+        control_plane_endpoint: "{{ hostvars[groups['masters'][0]].ansible_host }}:6443"
 
     - name: Initialize master (only on first master)
       command: >-
