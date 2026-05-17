@@ -12,8 +12,8 @@ fi
 echo "--> Detecting nodes from $INVENTORY..."
 
 # Extract node names from the inventory file
-# It looks for lines that start with k8s- or haproxy
-NODES=$(grep -E "^(k8s-|haproxy)" "$INVENTORY" | awk '{print $1}' | sort -u || true)
+# It looks for lines that start with k8s-
+NODES=$(grep -E "^k8s-" "$INVENTORY" | awk '{print $1}' | sort -u || true)
 
 if [ -z "$NODES" ]; then
     echo "No nodes found to destroy."

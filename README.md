@@ -143,7 +143,7 @@ mac-k8s-lab/
 ### Cluster Variables
 Edit `cluster_vars.yml` to customize:
 ```yaml
-masters_count: 1           # Number of master nodes
+masters_count: 1           # Number of master nodes (Fixed to 1 for this lab)
 workers_count: 2           # Number of worker nodes
 k8s_version: "1.32"        # Kubernetes version
 ```

@@ -43,13 +43,6 @@
   ansible.builtin.copy:
     dest: "./inventory.ini"
     content: |
-      [haproxy]
-      {% for res in vm_ips_raw.results %}
-      {% if res.item == 'haproxy' %}
-      haproxy ansible_host={{ res.stdout }} ansible_user=ubuntu
-      {% endif %}
-      {% endfor %}
-
       [masters]
       {% for res in vm_ips_raw.results %}
       {% if 'master' in res.item %}
