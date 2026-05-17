@@ -1,9 +1,12 @@
 ---
 - name: Create List of Nodes
   ansible.builtin.set_fact:
-    nodes: >-
-      {{ [ 'k8s-master-' ~ i for i in range(1, masters_count | int + 1) ]
-         + [ 'k8s-worker-' ~ i for i in range(1, workers_count | int + 1) ] }}
+    nodes: |
+      {% set n = ['k8s-master-1'] %}
+      {% for i in range(1, workers_count | int + 1) %}
+      {%   set _ = n.append('k8s-worker-' ~ i) %}
+      {% endfor %}
+      {{ n }}
 
 - name: Launch or Start Multipass VMs
   ansible.builtin.shell: |
